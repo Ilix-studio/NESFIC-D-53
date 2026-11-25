@@ -1,0 +1,43 @@
+{
+  "note": "On-device and on-server speech-to-text models: AI4Bharat IndicConformer (CC-BY-4.0), int8 ONNX exports by the Assam AI Initiative with the audio front end inside the graph (raw 16 kHz mono float32 in, CTC log-probs out). Third-party exports pinned by revision and SHA-256; for the pilot, re-export from AI4Bharat's checkpoint and host the files in India. No Bengali export yet.",
+  "models": [
+    {
+      "id": "indicconformer-as-int8",
+      "lang": "as",
+      "label": "Assamese speech (IndicConformer, int8)",
+      "file": "indicconformer-as-int8.onnx",
+      "sizeBytes": 198777538,
+      "sha256": "2357d51e3fc52757f6a4eeea9937279761b9a4aee3a015ff4e26d9c376564865",
+      "tokens": "indicconformer-as-int8.tokens.json",
+      "sampleRate": 16000,
+      "tokenOffset": 0,
+      "langVocabSize": 256,
+      "blankId": 5632,
+      "license": "CC-BY-4.0",
+      "source": {
+        "repo": "aaiiaxom/indicconformer-assamese-onnx-int8",
+        "revision": "171389d94c147c2af165ba2e34e52c1d6457e0c0",
+        "path": "model_cpu_int8.onnx"
+      }
+    },
+    {
+      "id": "indicconformer-brx-int8",
+      "lang": "brx",
+      "label": "Bodo speech (IndicConformer, int8)",
+      "file": "indicconformer-brx-int8.onnx",
+      "sizeBytes": 198789864,
+      "sha256": "d1d7e105dff52b08382285eb51e5fb8315af6b0c12d7c1829a82fcb3391cedd0",
+      "tokens": "indicconformer-brx-int8.tokens.json",
+      "sampleRate": 16000,
+      "tokenOffset": 0,
+      "langVocabSize": 256,
+      "blankId": 256,
+      "license": "CC-BY-4.0",
+      "source": {
+        "repo": "aaiiaxom/indicconformer-bodo-onnx-int8",
+        "revision": "21a6d4bbdf57600a3ce0b5da56bae68f5e57ce06",
+        "path": "model_cpu_int8.onnx"
+      }
+    }
+  ]
+}

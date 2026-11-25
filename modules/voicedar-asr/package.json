@@ -1,0 +1,7 @@
+{
+  "name": "voicedar-asr",
+  "version": "0.1.0",
+  "private": true,
+  "description": "On-device speech-to-text for VoiceDAR: decodes a clip and runs an IndicConformer ONNX model (Android)",
+  "main": "index.ts"
+}

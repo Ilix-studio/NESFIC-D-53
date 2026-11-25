@@ -1,0 +1,16 @@
+-- Merging decision tree log ---
+manifest
+ADDED from /Users/ilish_acc/Developer/NESFIC/client/modules/voicedar-asr/android/build/intermediates/tmp/ProcessLibraryManifest/debug/tempAndroidManifest2245989800297751085.xml:2:13-83
+INJECTED from /Users/ilish_acc/Developer/NESFIC/client/modules/voicedar-asr/android/build/intermediates/tmp/ProcessLibraryManifest/debug/tempAndroidManifest2245989800297751085.xml:2:13-83
+	package
+		INJECTED from /Users/ilish_acc/Developer/NESFIC/client/modules/voicedar-asr/android/build/intermediates/tmp/ProcessLibraryManifest/debug/tempAndroidManifest2245989800297751085.xml
+	xmlns:android
+		ADDED from /Users/ilish_acc/Developer/NESFIC/client/modules/voicedar-asr/android/build/intermediates/tmp/ProcessLibraryManifest/debug/tempAndroidManifest2245989800297751085.xml:2:23-81
+uses-sdk
+INJECTED from /Users/ilish_acc/Developer/NESFIC/client/modules/voicedar-asr/android/build/intermediates/tmp/ProcessLibraryManifest/debug/tempAndroidManifest2245989800297751085.xml reason: use-sdk injection requested
+INJECTED from /Users/ilish_acc/Developer/NESFIC/client/modules/voicedar-asr/android/build/intermediates/tmp/ProcessLibraryManifest/debug/tempAndroidManifest2245989800297751085.xml
+INJECTED from /Users/ilish_acc/Developer/NESFIC/client/modules/voicedar-asr/android/build/intermediates/tmp/ProcessLibraryManifest/debug/tempAndroidManifest2245989800297751085.xml
+	android:targetSdkVersion
+		INJECTED from /Users/ilish_acc/Developer/NESFIC/client/modules/voicedar-asr/android/build/intermediates/tmp/ProcessLibraryManifest/debug/tempAndroidManifest2245989800297751085.xml
+	android:minSdkVersion
+		INJECTED from /Users/ilish_acc/Developer/NESFIC/client/modules/voicedar-asr/android/build/intermediates/tmp/ProcessLibraryManifest/debug/tempAndroidManifest2245989800297751085.xml

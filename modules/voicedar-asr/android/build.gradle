@@ -1,0 +1,20 @@
+plugins {
+  id 'com.android.library'
+  id 'expo-module-gradle-plugin'
+}
+
+group = 'in.nesfic.voicedar'
+version = '0.1.0'
+
+android {
+  namespace "expo.modules.voicedarasr"
+  defaultConfig {
+    versionCode 1
+    versionName '0.1.0'
+  }
+}
+
+dependencies {
+  // Same ONNX Runtime line as the server (onnxruntime-node 1.31.1), so both decode alike.
+  implementation 'com.microsoft.onnxruntime:onnxruntime-android:1.31.1'
+}
