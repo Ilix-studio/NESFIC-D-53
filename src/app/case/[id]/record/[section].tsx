@@ -4,6 +4,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, TextInput, View } from 'react-native';
 
+import { useAuth } from '@/auth/AuthContext';
 import { captureSectionClip, mapClipText, type ClipOutcome } from '@/case/pipeline';
 import { openFollowups } from '@/case/state';
 import { fieldTitle, formatValue, PlaceholderNote } from '@/components/case-ui';
@@ -61,6 +62,7 @@ function useLevelWarning(isRecording: boolean, metering: number | undefined) {
 export default function RecordSectionScreen() {
   const t = useTheme();
   const repo = useRepo();
+  const { officer } = useAuth();
   const { id, section } = useLocalSearchParams<{ id: string; section: SectionId }>();
   const doc = useRepoData(`case:${id}`, (r) => r.loadCase(id));
   const clips = useRepoData(`clips:${id}:${section}`, async (r) => (await r.listClips(id)).filter((c) => c.section === section)) ?? [];
@@ -90,7 +92,7 @@ export default function RecordSectionScreen() {
     if (!clip) return;
     setBusy(true);
     try {
-      setOutcome(await captureSectionClip(repo, { caseId: id, section, uri: clip.uri, mimeType: CLIP_MIME, durationMs: clip.durationMs }));
+      setOutcome(await captureSectionClip(repo, { caseId: id, section, uri: clip.uri, mimeType: CLIP_MIME, durationMs: clip.durationMs, voice: officer?.voice }));
     } finally {
       setBusy(false);
     }
@@ -179,11 +181,19 @@ export default function RecordSectionScreen() {
           <T variant="small">{outcome.error}. The server will transcribe it after sync.</T>
         </Card>
       )}
+      {last?.speaker && !last.speaker.match && (
+        <Card tone="warn">
+          <T variant="heading">Voice did not match the IO's voiceprint</T>
+          <T variant="small">
+            Score {last.speaker.score.toFixed(2)}. The clip is kept and flagged for review. If someone else spoke, note who in the review.
+          </T>
+        </Card>
+      )}
 
       <T variant="label">Transcript ({getLang(doc.lang).name})</T>
       {last?.transcriptText ? (
         <Card>
-          {last.transcriptEngine === 'demo' && <Pill tone="warn" text="Demo engine: synthetic transcript, not your recording" />}
+          {last.transcriptEngine === 'demo' && <Pill tone="warn" text="Demo engine: synthetic transcript" />}
           {last.transcriptEngine === 'officer-corrected' && <Pill tone="muted" text="Corrected by IO" />}
           {editing === null ? (
             <>

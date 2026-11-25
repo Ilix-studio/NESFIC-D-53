@@ -9,7 +9,10 @@ import { MODEL_MANIFEST, type ModelEntry } from './manifest';
 export type ModelState = { state: 'installed'; sizeBytes: number } | { state: 'not_installed' } | { state: 'not_published' };
 
 const modelsDir = () => new Directory(Paths.document, 'models');
-export const modelFile = (entry: ModelEntry) => new File(modelsDir(), `${entry.id}.onnx`);
+/** What a download needs: speech models (ModelEntry) and the speaker model both fit. */
+export type PinnedModel = Pick<ModelEntry, 'id' | 'url' | 'sizeBytes' | 'sha256'>;
+
+export const modelFile = (entry: PinnedModel) => new File(modelsDir(), `${entry.id}.onnx`);
 
 export const modelFor = (lang: CaseLang) => MODEL_MANIFEST.find((m) => m.lang === lang);
 
@@ -34,7 +37,7 @@ export function freeStorageBytes(): number | null {
 }
 
 /** Why a download cannot start now, or null if it can. */
-export async function downloadBlocker(entry: ModelEntry): Promise<string | null> {
+export async function downloadBlocker(entry: PinnedModel): Promise<string | null> {
   const net = await NetInfo.fetch();
   if (net.type !== 'wifi') return 'Connect to station Wi-Fi to download models.';
   const free = freeStorageBytes();
@@ -42,7 +45,7 @@ export async function downloadBlocker(entry: ModelEntry): Promise<string | null>
   return null;
 }
 
-export async function downloadModel(entry: ModelEntry, onProgress?: (fraction: number) => void): Promise<void> {
+export async function downloadModel(entry: PinnedModel, onProgress?: (fraction: number) => void): Promise<void> {
   const blocker = await downloadBlocker(entry);
   if (blocker) throw new Error(blocker);
   const dir = modelsDir();
@@ -63,7 +66,7 @@ export async function downloadModel(entry: ModelEntry, onProgress?: (fraction: n
   partial.move(target);
 }
 
-export function deleteModel(entry: ModelEntry): void {
+export function deleteModel(entry: PinnedModel): void {
   const file = modelFile(entry);
   if (file.exists) file.delete();
 }

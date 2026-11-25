@@ -84,7 +84,11 @@ export type Clip = {
   status: 'saved' | 'transcribed' | 'server_only' | 'failed';
   error?: string;
   filledKeys: string[];
+  /** Voice check against the IO's voiceprint; absent = not checked. A mismatch never blocks. */
+  speaker?: SpeakerCheck;
 };
+
+export type SpeakerCheck = { score: number; match: boolean; engine: string };
 
 export type PhotoChecklistItem = 'road_surface' | 'vehicle_positions' | 'skid_marks' | 'lighting' | 'signs' | 'number_plates' | 'other';
 
@@ -114,6 +118,7 @@ export const AUDIT_TYPES = [
   'language_set',
   'proposal_accepted',
   'proposal_rejected',
+  'speaker_mismatch',
 ] as const;
 export type AuditType = (typeof AUDIT_TYPES)[number];
 

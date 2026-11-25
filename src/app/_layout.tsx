@@ -2,12 +2,15 @@ import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
+import { Provider } from 'react-redux';
+import { PersistGate } from 'redux-persist/integration/react';
 
-import { AuthProvider, useAuth } from '@/auth/AuthContext';
+import { SessionRestorer, useAuth } from '@/auth/AuthContext';
 import { Screen, T } from '@/components/ui';
 import { openRepo, RepoProvider, type Repo } from '@/db';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { SyncProvider } from '@/sync/SyncContext';
+import { persistor, store } from '@/store';
+import { SyncRunner } from '@/sync/SyncContext';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -18,6 +21,7 @@ function Navigator() {
       <Stack.Screen name="cases" options={{ title: 'Cases' }} />
       <Stack.Screen name="settings" options={{ title: 'Settings & sync' }} />
       <Stack.Screen name="login" options={{ title: 'Officer login', presentation: 'modal' }} />
+      <Stack.Screen name="voice" options={{ title: 'Your voiceprint' }} />
       <Stack.Screen name="engines" options={{ title: 'Offline engines' }} />
       <Stack.Screen name="case/[id]/index" options={{ title: 'Case' }} />
       <Stack.Screen name="case/[id]/record/[section]" options={{ title: 'Record a section' }} />
@@ -54,9 +58,8 @@ function Bootstrap() {
   if (!repo || !ready) return null;
   return (
     <RepoProvider repo={repo}>
-      <SyncProvider>
-        <Navigator />
-      </SyncProvider>
+      <SyncRunner />
+      <Navigator />
     </RepoProvider>
   );
 }
@@ -64,11 +67,14 @@ function Bootstrap() {
 export default function RootLayout() {
   const scheme = useColorScheme();
   return (
-    <ThemeProvider value={scheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <AuthProvider>
-        <StatusBar style="auto" />
-        <Bootstrap />
-      </AuthProvider>
-    </ThemeProvider>
+    <Provider store={store}>
+      <PersistGate persistor={persistor} loading={null}>
+        <ThemeProvider value={scheme === 'dark' ? DarkTheme : DefaultTheme}>
+          <SessionRestorer />
+          <StatusBar style="auto" />
+          <Bootstrap />
+        </ThemeProvider>
+      </PersistGate>
+    </Provider>
   );
 }

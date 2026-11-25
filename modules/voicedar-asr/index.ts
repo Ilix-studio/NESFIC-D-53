@@ -18,9 +18,16 @@ export type NativeTranscript = {
   elapsedMs: number;
 };
 
+export type SpeakerOptions = { sampleRate: number; melBins: number };
+
+/** A voiceprint scaled to length 1 (null when the clip is under 25 ms), and the clip length. */
+export type NativeVoiceprint = { embedding: number[] | null; seconds: number };
+
 type VoicedarAsrModule = {
   transcribe(modelUri: string, audioUri: string, options: TranscribeOptions): Promise<NativeTranscript>;
-  /** Frees the loaded model (about 200 MB). */
+  /** Officer voice check: the clip's voiceprint from the WeSpeaker model (Fbank.kt + ONNX). */
+  embedSpeaker(modelUri: string, audioUri: string, options: SpeakerOptions): Promise<NativeVoiceprint>;
+  /** Frees the loaded models (speech about 200 MB, speaker about 27 MB). */
   release(): void;
 };
 

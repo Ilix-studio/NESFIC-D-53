@@ -24,6 +24,7 @@ import type {
   SyncCase,
   SyncResult,
   UploadFile,
+  VoicePassage,
 } from './types';
 
 export class ApiError extends Error {
@@ -121,6 +122,16 @@ export async function uploadClip(
   if (clip.durationMs != null) form.append('durationMs', String(Math.round(clip.durationMs)));
   return request<ClipResult>(`/cases/${encodeURIComponent(caseId)}/clips`, { method: 'POST', form, timeoutMs: UPLOAD_TIMEOUT });
 }
+// Officer voiceprint: read a passage once after the account is created
+export const voicePassages = () => request<{ minSeconds: number; passages: VoicePassage[] }>('/voice/passages');
+export async function enrolVoice(input: { file: UploadFile; lang: string; passageId: string }) {
+  const form = new FormData();
+  await appendFile(form, 'audio', input.file);
+  form.append('lang', input.lang);
+  form.append('passageId', input.passageId);
+  return request<{ officer: Officer }>('/voice/enrol', { method: 'POST', form, timeoutMs: UPLOAD_TIMEOUT });
+}
+
 export const clipAudioUrl = (caseId: string, clipId: string) => `${API_URL}/cases/${encodeURIComponent(caseId)}/clips/${clipId}/audio`;
 
 // Follow-up questions

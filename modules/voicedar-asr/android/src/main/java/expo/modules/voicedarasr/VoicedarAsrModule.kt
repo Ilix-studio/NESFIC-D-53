@@ -25,6 +25,11 @@ class TranscribeOptions : Record {
   @Field var maxSeconds: Double = 12.0
 }
 
+class SpeakerOptions : Record {
+  @Field var sampleRate: Int = 16000
+  @Field var melBins: Int = 80
+}
+
 /**
  * On-device speech-to-text with an IndicConformer CTC model (int8 ONNX, audio front end inside
  * the graph): decode the clip -> cut it at pauses into pieces of at most maxSeconds -> ONNX
@@ -37,6 +42,9 @@ class VoicedarAsrModule : Module() {
   // One model in memory at a time (about 200 MB); officers record in one language per case.
   private var session: OrtSession? = null
   private var sessionPath: String? = null
+  // The speaker model (about 27 MB) has its own session, so a voice check does not unload ASR.
+  private var speakerSession: OrtSession? = null
+  private var speakerPath: String? = null
 
   private fun sessionFor(path: String): OrtSession = synchronized(this) {
     if (sessionPath != path) {
@@ -49,6 +57,15 @@ class VoicedarAsrModule : Module() {
       sessionPath = path
     }
     session!!
+  }
+
+  private fun speakerSessionFor(path: String): OrtSession = synchronized(this) {
+    if (speakerPath != path) {
+      speakerSession?.close()
+      speakerSession = env.createSession(path, OrtSession.SessionOptions())
+      speakerPath = path
+    }
+    speakerSession!!
   }
 
   override fun definition() = ModuleDefinition {
@@ -75,16 +92,44 @@ class VoicedarAsrModule : Module() {
       }
     }
 
+    // Officer voice check: fbank (Fbank.kt) -> WeSpeaker ONNX -> a 256-value voiceprint scaled to
+    // length 1. Mirrors the server's src/services/speaker. null when the clip is under 25 ms.
+    AsyncFunction("embedSpeaker") Coroutine { modelUri: String, audioUri: String, options: SpeakerOptions ->
+      val context = appContext.reactContext ?: throw Exceptions.ReactContextLost()
+      withContext(Dispatchers.Default) {
+        val samples = AudioDecoder.decode(context, audioUri, options.sampleRate)
+        val seconds = samples.size.toDouble() / options.sampleRate
+        val (feats, frames) = Fbank.compute(samples, options.melBins)
+        if (frames == 0) return@withContext mapOf("embedding" to null, "seconds" to seconds)
+        val session = speakerSessionFor(Uri.parse(modelUri).path ?: modelUri)
+        val shape = longArrayOf(1, frames.toLong(), options.melBins.toLong())
+        val embedding = OnnxTensor.createTensor(env, FloatBuffer.wrap(feats), shape).use { input ->
+          session.run(mapOf("feats" to input)).use { result ->
+            @Suppress("UNCHECKED_CAST")
+            (result[0].value as Array<FloatArray>)[0]
+          }
+        }
+        var norm = 0.0
+        for (v in embedding) norm += v * v
+        norm = kotlin.math.sqrt(norm).takeIf { it > 0 } ?: 1.0
+        mapOf("embedding" to embedding.map { it / norm }, "seconds" to seconds)
+      }
+    }
+
     Function("release") {
       synchronized(this@VoicedarAsrModule) {
         session?.close()
         session = null
         sessionPath = null
+        speakerSession?.close()
+        speakerSession = null
+        speakerPath = null
       }
     }
 
     OnDestroy {
       session?.close()
+      speakerSession?.close()
     }
   }
 

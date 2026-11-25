@@ -17,4 +17,5 @@ android {
 dependencies {
   // Same ONNX Runtime line as the server (onnxruntime-node 1.31.1), so both decode alike.
   implementation 'com.microsoft.onnxruntime:onnxruntime-android:1.31.1'
+  testImplementation 'junit:junit:4.13.2'
 }

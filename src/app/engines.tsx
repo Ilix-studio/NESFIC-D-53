@@ -8,6 +8,7 @@ import { Button, Card, Pill, ProgressBar, Screen, styles, T } from '@/components
 import { useRepo, useRepoData } from '@/db';
 import { CASE_LANGS, getLang, type CaseLang } from '@/lang';
 import { deleteModel, downloadBlocker, downloadModel, freeStorageBytes, modelFor, modelStatus } from '@/models/ModelManager';
+import { SPEAKER_MODEL, speakerModelInstalled } from '@/speaker';
 
 const gb = (bytes: number) => `${(bytes / 1024 ** 3).toFixed(1)} GB`;
 const mb = (bytes: number) => `${Math.round(bytes / 1024 ** 2)} MB`;
@@ -76,6 +77,62 @@ function LanguageCard({ lang, demoOn }: { lang: CaseLang; demoOn: boolean }) {
   );
 }
 
+/** The officer voice check model: one for all languages, about 27 MB. */
+function VoiceCheckCard() {
+  const [version, setVersion] = useState(0);
+  const installed = useRepoData(`speaker-model:${version}`, async () => speakerModelInstalled());
+  const blocker = useRepoData(`speaker-blocker:${version}`, () => downloadBlocker(SPEAKER_MODEL));
+  const [progress, setProgress] = useState<number | null>(null);
+  const runtime = onDeviceRuntime();
+
+  const download = async () => {
+    setProgress(0);
+    try {
+      await downloadModel(SPEAKER_MODEL, setProgress);
+    } catch (err) {
+      Alert.alert('Download failed', err instanceof Error ? err.message : String(err));
+    } finally {
+      setProgress(null);
+      setVersion((v) => v + 1);
+    }
+  };
+
+  return (
+    <Card>
+      <View style={styles.row}>
+        <T variant="heading" style={styles.flex}>
+          Officer voice check
+        </T>
+        <Pill tone={installed && runtime.available ? 'ok' : 'warn'} text={installed && runtime.available ? 'Ready offline' : 'Server after sync'} />
+      </View>
+      <T variant="small">
+        Compares each clip with your voiceprint and flags clips that sound like someone else. It never blocks a recording.
+        {'\n'}
+        {SPEAKER_MODEL.label}: {installed ? 'installed' : `not downloaded (${mb(SPEAKER_MODEL.sizeBytes)})`}
+      </T>
+      {progress !== null && <ProgressBar percent={Math.round(progress * 100)} label="Downloading" />}
+      {installed ? (
+        <Button
+          title="Delete model"
+          variant="secondary"
+          onPress={() => {
+            deleteModel(SPEAKER_MODEL);
+            setVersion((v) => v + 1);
+          }}
+        />
+      ) : (
+        <Button
+          title={blocker ?? 'Download over Wi-Fi'}
+          variant="secondary"
+          onPress={download}
+          loading={progress !== null}
+          disabled={Boolean(blocker) || progress !== null}
+        />
+      )}
+    </Card>
+  );
+}
+
 export default function EnginesScreen() {
   const repo = useRepo();
   const demo = useRepoData('meta:demo_asr', (r) => r.getMeta('demo_asr'));
@@ -114,6 +171,9 @@ export default function EnginesScreen() {
       {CASE_LANGS.map((lang) => (
         <LanguageCard key={lang} lang={lang} demoOn={demoOn} />
       ))}
+
+      <T variant="label">Voice check</T>
+      <VoiceCheckCard />
     </Screen>
   );
 }

@@ -97,3 +97,35 @@ test('a pull never undoes a decision the officer made on the phone', async () =>
   await repo.applyPull({ cursor: NOW, proposals: [proposal], cases: [] }, NOW);
   expect((await repo.listProposals('case-r4'))[0].status).toBe('rejected');
 });
+
+test('a voice check is stored on the clip; a mismatch is audited and synced', async () => {
+  const { repo } = await setup();
+  await repo.commit(null, openCase({ clientId: 'case-v1', now: NOW, officer, lang: 'as' }));
+  const clip = (clientId: string, section: 'crash' | 'road') => ({
+    clientId,
+    caseId: 'case-v1',
+    section,
+    uri: `file:///clips/${clientId}.m4a`,
+    mimeType: 'audio/m4a',
+    recordedAt: NOW,
+    status: 'saved' as const,
+    filledKeys: [],
+  });
+  for (const [id, section] of [['clip-v1', 'crash'], ['clip-v2', 'road']] as const) {
+    await repo.addClip(clip(id, section), { id: uuidv7(), caseId: 'case-v1', type: 'clip_saved', at: NOW, meta: { clipId: id } });
+  }
+
+  await repo.recordSpeakerCheck(clip('clip-v1', 'crash'), { score: 0.82, match: true, engine: 'wespeaker-resnet34' });
+  await repo.recordSpeakerCheck(clip('clip-v2', 'road'), { score: 0.21, match: false, engine: 'wespeaker-resnet34' });
+
+  const clips = await repo.listClips('case-v1');
+  expect(clips.map((c) => c.speaker)).toEqual([
+    { score: 0.82, match: true, engine: 'wespeaker-resnet34' },
+    { score: 0.21, match: false, engine: 'wespeaker-resnet34' },
+  ]);
+  const mismatches = (await repo.listAudit('case-v1')).filter((a) => a.type === 'speaker_mismatch');
+  expect(mismatches).toHaveLength(1);
+  expect(mismatches[0].meta).toMatchObject({ clipId: 'clip-v2', section: 'road', score: 0.21 });
+  const ops = await repo.syncStore.dueOps('data', NOW, 100, false);
+  expect(ops.filter((o) => o.entity === 'audit' && (o.payload as { type?: string }).type === 'speaker_mismatch')).toHaveLength(1);
+});

@@ -1,15 +1,14 @@
 // Runs the sync worker on app open, when the network comes back, when the app returns to the
 // foreground, a few seconds after each local change, every 30 s while changes wait, and from
 // "Sync now" (which skips the backoff delay). Needs the officer to be logged in.
+// Status lives in the Redux store (store/syncSlice); SyncRunner only decides when to run.
 import { useNetInfo } from '@react-native-community/netinfo';
-import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect } from 'react';
 import { AppState } from 'react-native';
 
-import { getToken } from '@/api/session';
-import { useAuth } from '@/auth/AuthContext';
 import { useRepo, useRepoData, type SyncStats } from '@/db';
-import { httpTransport } from './transport';
-import { runSync, type SyncReport } from './worker';
+import { syncNow as runSyncPass, useAppDispatch, useAppSelector } from '@/store';
+import type { SyncReport } from './worker';
 
 type SyncState = {
   running: boolean;
@@ -20,44 +19,25 @@ type SyncState = {
   syncNow: () => Promise<void>;
 };
 
-const SyncContext = createContext<SyncState | null>(null);
-
 const AFTER_CHANGE_MS = 3_000;
 const RETRY_EVERY_MS = 30_000;
 
-export function SyncProvider({ children }: { children: ReactNode }) {
-  const repo = useRepo();
-  const { officer } = useAuth();
-  const { isConnected } = useNetInfo();
-  const online = isConnected !== false;
-  const stats = useRepoData('sync-stats', (r) => r.syncStats());
-  const [running, setRunning] = useState(false);
-  const [lastReport, setLastReport] = useState<SyncReport | null>(null);
-  const busy = useRef(false);
+const useOnline = () => useNetInfo().isConnected !== false;
 
-  const run = useCallback(
-    async (manual: boolean) => {
-      if (busy.current || !(await getToken())) return;
-      busy.current = true;
-      setRunning(true);
-      try {
-        setLastReport(await runSync({ store: repo.syncStore, transport: httpTransport, ignoreBackoff: manual }));
-      } catch (err) {
-        setLastReport({ pushed: 0, uploaded: 0, rejected: 0, pulled: 0, error: err instanceof Error ? err.message : String(err) });
-      } finally {
-        busy.current = false;
-        setRunning(false);
-      }
-    },
-    [repo],
-  );
+export function SyncRunner() {
+  const repo = useRepo();
+  const dispatch = useAppDispatch();
+  const loggedIn = useAppSelector((s) => Boolean(s.session.officer));
+  const online = useOnline();
+
+  const run = useCallback(() => void dispatch(runSyncPass({ repo, manual: false })), [dispatch, repo]);
 
   // App open, login, and the network coming back.
   useEffect(() => {
-    if (!online || !officer) return;
-    const timer = setTimeout(() => run(false), 0);
+    if (!online || !loggedIn) return;
+    const timer = setTimeout(run, 0);
     return () => clearTimeout(timer);
-  }, [online, officer, run]);
+  }, [online, loggedIn, run]);
 
   // A few seconds after each change made on the phone.
   useEffect(() => {
@@ -65,7 +45,7 @@ export function SyncProvider({ children }: { children: ReactNode }) {
     const off = repo.onChange((caseId) => {
       if (caseId === null) return;
       clearTimeout(timer);
-      timer = setTimeout(() => run(false), AFTER_CHANGE_MS);
+      timer = setTimeout(run, AFTER_CHANGE_MS);
     });
     return () => {
       off();
@@ -75,23 +55,26 @@ export function SyncProvider({ children }: { children: ReactNode }) {
 
   // Back in the foreground, and a slow retry loop (the worker respects its backoff).
   useEffect(() => {
-    const sub = AppState.addEventListener('change', (s) => s === 'active' && run(false));
-    const timer = setInterval(() => run(false), RETRY_EVERY_MS);
+    const sub = AppState.addEventListener('change', (s) => s === 'active' && run());
+    const timer = setInterval(run, RETRY_EVERY_MS);
     return () => {
       sub.remove();
       clearInterval(timer);
     };
   }, [run]);
 
-  const syncNow = useCallback(() => run(true), [run]);
-
-  return (
-    <SyncContext.Provider value={{ running, online, loggedIn: Boolean(officer), stats, lastReport, syncNow }}>{children}</SyncContext.Provider>
-  );
+  return null;
 }
 
 export function useSync(): SyncState {
-  const ctx = useContext(SyncContext);
-  if (!ctx) throw new Error('useSync must be used inside <SyncProvider>');
-  return ctx;
+  const repo = useRepo();
+  const dispatch = useAppDispatch();
+  const { running, lastReport } = useAppSelector((s) => s.sync);
+  const loggedIn = useAppSelector((s) => Boolean(s.session.officer));
+  const online = useOnline();
+  const stats = useRepoData('sync-stats', (r) => r.syncStats());
+  const syncNow = useCallback(async () => {
+    await dispatch(runSyncPass({ repo, manual: true }));
+  }, [dispatch, repo]);
+  return { running, online, loggedIn, stats, lastReport, syncNow };
 }

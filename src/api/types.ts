@@ -8,7 +8,21 @@ export type Officer = {
   policeStation: string;
   district: string;
   role: 'io' | 'supervisor' | 'admin';
+  /** Set once the IO has read a passage aloud (POST /voice/enrol). */
+  voice?: OfficerVoice;
 };
+
+/** The IO's voiceprint: 256 numbers from the speaker model, not the recording itself. */
+export type OfficerVoice = {
+  lang: string;
+  passageId: string;
+  model: string;
+  embedding: number[];
+  seconds: number;
+  enrolledAt: string;
+};
+
+export type VoicePassage = { id: string; lang: string; status: 'draft' | 'placeholder' | 'reviewed'; text: string; en: string };
 
 export type Health = {
   status: 'ok' | 'degraded';

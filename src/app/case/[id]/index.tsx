@@ -13,6 +13,7 @@ import { useTheme } from '@/constants/theme';
 import { useRepo, useRepoData } from '@/db';
 import { CASE_LANGS, getLang, type CaseLang } from '@/lang';
 import { getField, schema, type SectionId } from '@/schema';
+import { caseLangChosen, useAppDispatch } from '@/store';
 import { formatDateTime } from '@/utils/format';
 
 const CHECKLIST_SIZE = 6;
@@ -31,6 +32,7 @@ function sectionStatus(clips: Clip[], section: SectionId): string {
 export default function CaseHomeScreen() {
   const t = useTheme();
   const repo = useRepo();
+  const dispatch = useAppDispatch();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { isConnected } = useNetInfo();
   const doc = useRepoData(`case:${id}`, (r) => r.loadCase(id));
@@ -58,7 +60,7 @@ export default function CaseHomeScreen() {
   };
   const applyLanguage = async (lang: CaseLang) => {
     await repo.update(id, (d) => setLanguage(d, lang, new Date().toISOString()));
-    await repo.setMeta('last_lang', lang);
+    dispatch(caseLangChosen(lang));
   };
 
   return (

@@ -1,16 +1,37 @@
 // Cases on this phone, newest first, with "New case" at the bottom. Opened from the welcome screen.
-import { router } from 'expo-router';
+// The settings icon (top right) opens login, settings and sync.
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { router, Stack } from 'expo-router';
 import { useState } from 'react';
-import { ActivityIndicator, Alert, View } from 'react-native';
+import { ActivityIndicator, Alert, Pressable, View } from 'react-native';
 
 import { useAuth } from '@/auth/AuthContext';
 import { openCase, setLocation } from '@/case/commands';
 import { Button, Card, Pill, ProgressBar, Screen, styles, T } from '@/components/ui';
+import { TOUCH, useTheme } from '@/constants/theme';
 import { useRepo, useRepoData, type CaseSummary } from '@/db';
-import { getLang, isCaseLang } from '@/lang';
+import { getLang } from '@/lang';
+import { useAppSelector } from '@/store';
 import { formatDateTime } from '@/utils/format';
 import { currentLocation } from '@/utils/location';
 import { uuidv7 } from '@/utils/uuid';
+
+/** Header button: settings and sync (also where the officer logs in). */
+function SettingsButton() {
+  const t = useTheme();
+  const { officer } = useAuth();
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={officer ? `Settings and sync. Logged in as ${officer.name}` : 'Settings and sync. Not logged in'}
+      onPress={() => router.push('/settings')}
+      hitSlop={8}
+      style={{ minWidth: TOUCH, minHeight: TOUCH, alignItems: 'center', justifyContent: 'center' }}
+    >
+      <MaterialCommunityIcons name="cog-outline" size={26} color={t.primary} />
+    </Pressable>
+  );
+}
 
 const STATUS_LABEL = { draft: 'Draft', in_review: 'In review', signed: 'Signed' } as const;
 
@@ -43,6 +64,7 @@ function CaseCard({ c }: { c: CaseSummary }) {
 export default function CasesScreen() {
   const repo = useRepo();
   const { officer } = useAuth();
+  const caseLang = useAppSelector((st) => st.settings.caseLang);
   const cases = useRepoData('cases', (r) => r.listCases());
   const [creating, setCreating] = useState(false);
 
@@ -50,9 +72,7 @@ export default function CasesScreen() {
     setCreating(true);
     try {
       const clientId = uuidv7();
-      const lastLang = await repo.getMeta('last_lang');
-      const lang = lastLang && isCaseLang(lastLang) ? lastLang : 'as';
-      await repo.commit(null, openCase({ clientId, now: new Date().toISOString(), officer, lang }));
+      await repo.commit(null, openCase({ clientId, now: new Date().toISOString(), officer, lang: caseLang }));
       router.push({ pathname: '/case/[id]', params: { id: clientId } });
       // GPS can take a few seconds outdoors; the case does not wait for it.
       currentLocation().then((loc) => {
@@ -67,6 +87,7 @@ export default function CasesScreen() {
 
   return (
     <Screen footer={<Button title="New case" onPress={newCase} loading={creating} />}>
+      <Stack.Screen options={{ headerRight: () => <SettingsButton /> }} />
       {cases === undefined ? (
         <ActivityIndicator />
       ) : cases.length === 0 ? (

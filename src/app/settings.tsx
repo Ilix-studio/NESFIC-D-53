@@ -1,7 +1,7 @@
 // Settings: officer login, sync status, offline engines and the server connection.
 // Kept off the main flow (Welcome -> Cases -> Case); opened from the welcome screen.
 import { router } from 'expo-router';
-import { ActivityIndicator, View } from 'react-native';
+import { ActivityIndicator, Pressable, View } from 'react-native';
 
 import { API_URL } from '@/api';
 import { onDeviceRuntime } from '@/asr/on-device';
@@ -59,6 +59,13 @@ function OfficerCard() {
         </View>
         <Button title="Log out" variant="secondary" onPress={logout} />
       </View>
+      {officer.voice ? (
+        <Pressable onPress={() => router.push('/voice')} accessibilityRole="button">
+          <T variant="small">Voiceprint recorded {new Date(officer.voice.enrolledAt).toLocaleDateString()} · Record again ›</T>
+        </Pressable>
+      ) : (
+        <Button title="Record your voiceprint" onPress={() => router.push('/voice')} />
+      )}
     </Card>
   );
 }

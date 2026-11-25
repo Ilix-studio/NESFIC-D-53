@@ -145,6 +145,13 @@ export const MIGRATIONS: string[] = [
   );
   CREATE INDEX outbox_status ON outbox(status, seq);
   `,
+  `
+  -- Officer voice check (src/speaker): the clip compared with the IO's voiceprint.
+  -- NULL = not checked (no voiceprint, no speaker model, or the clip was too short).
+  ALTER TABLE clips ADD COLUMN speaker_score REAL;
+  ALTER TABLE clips ADD COLUMN speaker_match INTEGER;
+  ALTER TABLE clips ADD COLUMN speaker_engine TEXT;
+  `,
 ];
 
 export const DB_VERSION = MIGRATIONS.length;

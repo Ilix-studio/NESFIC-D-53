@@ -27,6 +27,7 @@ const AUDIT_LABEL: Record<AuditEntry['type'], string> = {
   language_set: 'Language changed',
   proposal_accepted: 'Server suggestion accepted',
   proposal_rejected: 'Server suggestion rejected',
+  speaker_mismatch: 'Voice did not match the IO',
 };
 
 const short = (v: unknown) => (v === undefined || v === null ? '—' : typeof v === 'object' ? JSON.stringify(v) : String(v));

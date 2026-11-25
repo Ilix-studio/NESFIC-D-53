@@ -12,7 +12,7 @@ export async function chooseAsrEngine(lang: CaseLang, ctx: AsrContext, opts: { d
   const runtime = onDeviceRuntime();
   if (runtime.available && (await modelStatus(lang)).state === 'installed') return { engine: onDeviceAsrEngine };
   if (opts.demoEnabled && demoAsrEngine.has(lang, ctx)) {
-    return { engine: demoAsrEngine, note: 'Demo engine: synthetic transcript, not your recording.' };
+    return { engine: demoAsrEngine, note: 'Demo engine: synthetic transcript.' };
   }
   return {
     engine: null,

@@ -3,8 +3,10 @@
 // rule mapper -> fields + rules + follow-ups. With no offline engine the clip is kept and the
 // server transcribes it after sync; its results come back as proposals.
 import { chooseAsrEngine } from '@/asr/router';
+import type { OfficerVoice } from '@/api/types';
 import type { Repo } from '@/db/repo';
 import { ruleMapper } from '@/mapper';
+import { checkSpeaker } from '@/speaker';
 import type { TranscriptSpan } from '@/schema';
 import { uuidv7 } from '@/utils/uuid';
 import { answerFollowup, applyTranscript } from './commands';
@@ -30,12 +32,23 @@ async function saveClip(repo: Repo, input: { caseId: string; section: ClipSectio
   return clipId;
 }
 
-/** Saves a section clip and runs the offline pipeline on it. */
+/** Compares the clip with the IO's voiceprint; a failed check leaves the clip unchecked. */
+async function runSpeakerCheck(repo: Repo, clip: { clientId: string; caseId: string; section: ClipSection; uri: string }, voice?: OfficerVoice) {
+  try {
+    const check = await checkSpeaker(clip.uri, voice);
+    if (check) await repo.recordSpeakerCheck(clip, check);
+  } catch {
+    // e.g. the model file was removed: the server checks the clip after sync
+  }
+}
+
+/** Saves a section clip and runs the offline pipeline on it (voice check, then speech-to-text). */
 export async function captureSectionClip(
   repo: Repo,
-  input: { caseId: string; section: ClipSection; uri: string; mimeType: string; durationMs?: number },
+  input: { caseId: string; section: ClipSection; uri: string; mimeType: string; durationMs?: number; voice?: OfficerVoice },
 ): Promise<ClipOutcome> {
   const clipId = await saveClip(repo, input);
+  await runSpeakerCheck(repo, { clientId: clipId, caseId: input.caseId, section: input.section, uri: input.uri }, input.voice);
   const doc = (await repo.loadCase(input.caseId))!;
   const choice = await chooseAsrEngine(doc.lang, { section: input.section }, { demoEnabled: await isDemoEnabled(repo) });
   if (!choice.engine) {

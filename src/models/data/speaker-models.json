@@ -1,0 +1,22 @@
+{
+  "note": "Speaker-recognition model for the officer voice check: WeSpeaker ResNet34 trained on VoxCeleb (Apache-2.0), ONNX. Input: 80-band Kaldi fbank (25 ms frames, 10 ms shift, Hamming window, no dither) with the per-utterance mean removed, shape [1, frames, 80]. Output: a 256-value voiceprint, compared by cosine similarity. Pinned by revision and SHA-256; for the pilot, host the file in India. The match threshold is a starting value, to be calibrated on pilot recordings.",
+  "models": [
+    {
+      "id": "wespeaker-resnet34",
+      "label": "Officer voice check (WeSpeaker ResNet34)",
+      "file": "wespeaker-voxceleb-resnet34.onnx",
+      "sizeBytes": 26534127,
+      "sha256": "9fea6516d7ad6bf0a76c7689f5a49b65d330fad6dde96c91bb4435ffbfe056a1",
+      "sampleRate": 16000,
+      "melBins": 80,
+      "embeddingSize": 256,
+      "matchThreshold": 0.5,
+      "license": "Apache-2.0",
+      "source": {
+        "repo": "Wespeaker/wespeaker-voxceleb-resnet34",
+        "revision": "ff1ac5bca8ef11e90662b879aa923979e0bd277b",
+        "path": "voxceleb_resnet34.onnx"
+      }
+    }
+  ]
+}

@@ -1,16 +1,15 @@
-// Welcome screen: the app's front door. "Open" goes to the cases on this phone.
+// Welcome screen: the app's front door. "Open" goes to the cases on this phone, where the
+// settings icon (top right) leads to login, settings and sync.
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { router } from "expo-router";
-import { Pressable, StyleSheet, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { useAuth } from "@/auth/AuthContext";
 import { Button, T } from "@/components/ui";
 import { Space, TOUCH, useTheme } from "@/constants/theme";
 
 export default function WelcomeScreen() {
   const t = useTheme();
-  const { officer } = useAuth();
 
   return (
     <SafeAreaView style={[local.screen, { backgroundColor: t.background }]}>
@@ -36,17 +35,6 @@ export default function WelcomeScreen() {
           onPress={() => router.push("/cases")}
           style={local.open}
         />
-        <Pressable
-          accessibilityRole='button'
-          onPress={() => router.push("/settings")}
-          style={local.link}
-        >
-          <T variant='small' color={t.primary}>
-            {officer
-              ? `${officer.name} · Settings & sync`
-              : "Log in · Settings & sync"}
-          </T>
-        </Pressable>
       </View>
     </SafeAreaView>
   );
@@ -72,5 +60,4 @@ const local = StyleSheet.create({
   tagline: { maxWidth: 320, marginTop: Space.sm },
   actions: { gap: Space.sm, paddingBottom: Space.md },
   open: { minHeight: TOUCH + 8 },
-  link: { minHeight: TOUCH, alignItems: "center", justifyContent: "center" },
 });

@@ -3,7 +3,7 @@
 // on the phone without being queued for sync. Also implements the sync worker's store.
 import type { Change, ExtraOp } from '@/case/commands';
 import { followupKey, sameValue } from '@/case/state';
-import type { AuditEntry, CaseDoc, CaseStatus, Clip, Followup, Photo, Proposal } from '@/case/types';
+import type { AuditEntry, CaseDoc, CaseStatus, Clip, Followup, Photo, Proposal, SpeakerCheck } from '@/case/types';
 import type { CaseLang } from '@/lang';
 import type { FieldValue } from '@/schema';
 import type { FileUpload, OutboxRow, PullResult, SyncStore } from '@/sync/types';
@@ -253,6 +253,10 @@ export class Repo {
       status: r.status as Clip['status'],
       error: str(r.error),
       filledKeys: parse<string[]>(r.filled_keys) ?? [],
+      speaker:
+        r.speaker_score == null
+          ? undefined
+          : { score: Number(r.speaker_score), match: r.speaker_match === 1, engine: String(r.speaker_engine) },
     };
   }
 
@@ -542,6 +546,31 @@ export class Repo {
     const clip = await this.getClip(clientId);
     await this.serial(() => this.db.runAsync(`UPDATE clips SET ${sets.join(', ')} WHERE client_id = ?`, ...params, clientId));
     this.emit(clip?.caseId ?? null);
+  }
+
+  /** Stores the voice check on a clip; a mismatch is also written to the audit trail (and synced). */
+  async recordSpeakerCheck(clip: Pick<Clip, 'clientId' | 'caseId' | 'section'>, check: SpeakerCheck): Promise<void> {
+    await this.tx(async () => {
+      await this.db.runAsync(
+        'UPDATE clips SET speaker_score = ?, speaker_match = ?, speaker_engine = ? WHERE client_id = ?',
+        check.score,
+        check.match ? 1 : 0,
+        check.engine,
+        clip.clientId,
+      );
+      if (check.match) return;
+      const audit: AuditEntry = {
+        id: uuidv7(),
+        caseId: clip.caseId,
+        type: 'speaker_mismatch',
+        at: new Date().toISOString(),
+        meta: { clipId: clip.clientId, section: clip.section, score: check.score },
+      };
+      await this.insertAudit([audit]);
+      const { id, caseId, ...payload } = audit;
+      await this.insertOutbox([{ entity: 'audit', op: 'append', clientId: id, caseId, payload }], audit.at);
+    });
+    this.emit(clip.caseId);
   }
 
   async addPhoto(photo: Photo, audit: AuditEntry): Promise<void> {

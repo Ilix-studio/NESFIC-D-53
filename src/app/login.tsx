@@ -20,8 +20,10 @@ export default function LoginScreen() {
     setBusy(true);
     setError(null);
     try {
-      await login(badgeNo.trim(), password);
-      router.back();
+      const officer = await login(badgeNo.trim(), password);
+      // First login: the IO reads a passage aloud once to record their voiceprint.
+      if (officer.voice) router.back();
+      else router.replace('/voice');
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Login failed');
     } finally {

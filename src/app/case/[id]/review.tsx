@@ -7,7 +7,7 @@ import { ActivityIndicator, Alert, Pressable, StyleSheet, TextInput, View } from
 import { acceptProposal, CommandError, confirmFields, editField, rejectProposal, signBlockers, signCase } from '@/case/commands';
 import { instanceCount, isEmpty } from '@/case/fields';
 import { openFollowups, unconfirmedFields } from '@/case/state';
-import type { CaseDoc, Proposal } from '@/case/types';
+import type { CaseDoc, Clip, Proposal } from '@/case/types';
 import { fieldTitle, formatValue, OptionChips, PROPOSAL_SOURCE, SourcePills, type ViewLang } from '@/components/case-ui';
 import { Button, Card, Pill, ProgressBar, Screen, styles, T } from '@/components/ui';
 import { useTheme } from '@/constants/theme';
@@ -16,6 +16,23 @@ import { fieldForKey, fieldKey, fieldsInSection, schema, type FieldDef } from '@
 import { currentLocation } from '@/utils/location';
 
 const now = () => new Date().toISOString();
+
+/** Clips whose voice did not match the IO's voiceprint. Shown for the record; nothing is blocked. */
+function VoiceCheckCard({ clips }: { clips: Clip[] }) {
+  const flagged = clips.filter((c) => c.speaker && !c.speaker.match);
+  if (!flagged.length) return null;
+  return (
+    <Card tone="warn">
+      <T variant="heading">Voice check: {flagged.length} clip{flagged.length === 1 ? '' : 's'} did not match the IO</T>
+      {flagged.map((c) => (
+        <T key={c.clientId} variant="small">
+          {c.section} clip, {new Date(c.recordedAt).toLocaleTimeString()} · score {c.speaker!.score.toFixed(2)}
+        </T>
+      ))}
+      <T variant="small">Check these values before confirming. The mismatch is in the audit trail.</T>
+    </Card>
+  );
+}
 
 function ProposalsCard({ doc, proposals, lang, onAct }: { doc: CaseDoc; proposals: Proposal[]; lang: ViewLang; onAct: (fn: () => Promise<unknown>) => void }) {
   const t = useTheme();
@@ -174,6 +191,7 @@ export default function ReviewScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const doc = useRepoData(`case:${id}`, (r) => r.loadCase(id));
   const proposals = useRepoData(`proposals:${id}`, (r) => r.listProposals(id)) ?? [];
+  const clips = useRepoData(`clips:${id}`, (r) => r.listClips(id)) ?? [];
   const [lang, setLang] = useState<ViewLang>('en');
   const [editing, setEditing] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -240,6 +258,7 @@ export default function ReviewScreen() {
       </View>
       <T variant="small">PLACEHOLDER eDAR schema v{schema.version}: not the official MoRTH field list.</T>
 
+      <VoiceCheckCard clips={clips} />
       <ProposalsCard doc={doc} proposals={proposals} lang={lang} onAct={act} />
 
       {schema.sections.map((section) => {
